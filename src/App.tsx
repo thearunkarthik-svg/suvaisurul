@@ -109,7 +109,7 @@ export default function App() {
 
     try {
       // 1. Prepare WhatsApp URL first
-      const shopPhone = '919003735732'; 
+      const shopPhone = '918610287942'; 
       const orderItemsList = Object.entries(cart).map(([id, quantity]) => {
         const item = [...MENU_ITEMS, ...COMBO_OFFERS].find(i => i.id === id);
         return { name: item?.name, quantity, price: item?.price };
