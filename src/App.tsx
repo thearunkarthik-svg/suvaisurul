@@ -10,7 +10,9 @@ import {
   Plus, 
   Minus,
   UtensilsCrossed,
-  MessageSquare
+  MessageSquare,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 
 // Menu Data
@@ -39,15 +41,42 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const upiDetails = {
+    id: 'manashasumalitharan@okicici',
+    number: '8610287942',
+    name: 'Ms S Manasha'
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const totalAmount = useMemo(() => {
     let total = 0;
-    Object.entries(cart).forEach(([id, qty]) => {
-      const item = [...MENU_ITEMS, ...COMBO_OFFERS].find(i => i.id === id);
-      if (item) total += item.price * qty;
+    Object.entries(cart).forEach(([_, qty]) => {
+      const item = [...MENU_ITEMS, ...COMBO_OFFERS].find(i => i.id === _);
+      if (item && typeof item.price === 'number') {
+        total += item.price * (qty as number);
+      }
     });
     return total;
   }, [cart]);
+
+  const upiDeepLink = useMemo(() => {
+    const baseUrl = 'upi://pay';
+    const params = new URLSearchParams({
+      pa: upiDetails.id,
+      pn: upiDetails.name,
+      am: totalAmount.toString(),
+      cu: 'INR',
+      tn: 'Suvai Surul Order'
+    });
+    return `${baseUrl}?${params.toString()}`;
+  }, [totalAmount]);
 
   const updateCart = (id: string, delta: number) => {
     setCart(prev => {
@@ -87,7 +116,7 @@ export default function App() {
       });
 
       const orderDetails = orderItemsList
-        .map(item => `• ${item.name} x ${item.quantity} = ₹${(item.price || 0) * item.quantity}`)
+        .map(item => `• ${item.name} x ${item.quantity} = ₹${((item.price as number) || 0) * (item.quantity as number)}`)
         .join('\n');
       
       const message = `*New Order from Suvai Surul!*
@@ -340,13 +369,60 @@ Please confirm my order. Thank you!`;
               <div className="p-2 bg-red-50 rounded-lg">
                 <CreditCard className="w-5 h-5 text-[#D41C1C]" />
               </div>
-              <h2 className="text-xl font-bold">Payment Confirmation</h2>
+              <h2 className="text-xl font-bold">Payment Details</h2>
             </div>
 
-            <div className="bg-red-50 p-4 rounded-2xl mb-6 border border-red-100">
-              <p className="text-sm text-red-800 font-medium">
-                Please pay the total amount via UPI to <span className="font-bold select-all">suvaisurul@upi</span> and enter the Transaction ID below.
-              </p>
+            <div className="bg-[#FDF6E3] rounded-2xl p-5 mb-6 border border-yellow-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Payee Name</p>
+                    <p className="font-bold text-gray-800">{upiDetails.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between group">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">UPI ID</p>
+                    <p className="font-mono font-bold text-[#D41C1C]">{upiDetails.id}</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => copyToClipboard(upiDetails.id, 'id')}
+                    className="p-2 hover:bg-white rounded-lg transition-all text-gray-400 hover:text-[#D41C1C]"
+                  >
+                    {copiedField === 'id' ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">UPI Number</p>
+                    <p className="font-mono font-bold text-gray-800">{upiDetails.number}</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => copyToClipboard(upiDetails.number, 'number')}
+                    className="p-2 hover:bg-white rounded-lg transition-all text-gray-400 hover:text-[#D41C1C]"
+                  >
+                    {copiedField === 'number' ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <a 
+                  href={upiDeepLink}
+                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold transition-all shadow-md
+                    ${totalAmount > 0 
+                      ? 'bg-white text-[#D41C1C] border-2 border-[#D41C1C] hover:bg-[#D41C1C] hover:text-white' 
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Pay Now via UPI App
+                </a>
+                <p className="text-[10px] text-center text-gray-400 mt-2 italic">Works on mobile with GPay, PhonePe, etc.</p>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -357,10 +433,11 @@ Please confirm my order. Thank you!`;
               
               <div>
                 <label className="block text-sm font-bold text-gray-500 uppercase tracking-wider mb-1 px-1">UPI Transaction ID</label>
+                <p className="text-[10px] text-gray-400 mb-2 px-1 italic">Enter the 12-digit ID after making the payment</p>
                 <input 
                   required
                   type="text"
-                  placeholder="12-digit Transaction ID"
+                  placeholder="e.g. 123456789012"
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-[#D41C1C] focus:outline-none transition-all bg-gray-50 font-mono"
                   value={formData.transactionId}
                   onChange={e => setFormData(prev => ({ ...prev, transactionId: e.target.value }))}
